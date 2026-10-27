@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>馬賽邏輯 5×5</title>
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#e6ece8; --panel:#f6f8f6; --grout:#b9c5be; --tile:#fbfcfb;
+  --ink:#1c2b27; --muted:#6b7b75; --fill:#27408b; --fill2:#3a56ad;
+  --x:#8a98a8; --ok:#1f7a5a; --btn:#27408b; --btnText:#fff;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#141b1a; --panel:#1d2624; --grout:#33423e; --tile:#26312e;
+    --ink:#e4ece8; --muted:#8fa19a; --fill:#7f9bf0; --fill2:#9bb2f6;
+    --x:#6f8090; --ok:#52c79c; --btn:#7f9bf0; --btnText:#10182e;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141b1a; --panel:#1d2624; --grout:#33423e; --tile:#26312e;
+  --ink:#e4ece8; --muted:#8fa19a; --fill:#7f9bf0; --fill2:#9bb2f6;
+  --x:#6f8090; --ok:#52c79c; --btn:#7f9bf0; --btnText:#10182e;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  min-height:100vh;display:flex;justify-content:center;
+}
+main{width:100%;max-width:440px;padding:20px 16px 28px}
+header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+h1{font-size:22px;margin:0;font-weight:700;letter-spacing:.04em}
+#timer{font-variant-numeric:tabular-nums;color:var(--muted);font-size:15px}
+.board{
+  background:var(--panel);border-radius:14px;padding:14px;
+  display:grid;grid-template-columns:auto 1fr;gap:6px;
+}
+.corner{}
+.colclues{display:grid;grid-template-columns:repeat(var(--n,5),minmax(0,1fr));gap:4px}
+.rowclues{display:grid;grid-template-rows:repeat(var(--n,5),minmax(0,1fr));gap:4px}
+.clue{
+  display:flex;gap:4px;font-weight:700;font-size:16px;line-height:1.1;
+  color:var(--ink);transition:color .15s,opacity .15s;
+}
+.colclue{flex-direction:column;justify-content:flex-end;align-items:center;padding-bottom:3px}
+.rowclue{flex-direction:row;justify-content:flex-end;align-items:center;padding-right:6px;min-width:56px}
+.clue.done{color:var(--ok);opacity:.55}
+.board[data-n="7"] .clue,.board[data-n="8"] .clue{font-size:13px;gap:3px}
+.board[data-n="7"] .rowclue,.board[data-n="8"] .rowclue{min-width:64px}
+.board[data-n="7"] .cell.x::after,.board[data-n="8"] .cell.x::after{font-size:15px}
+.board[data-n="10"]{padding:10px;gap:4px}
+.board[data-n="10"] .colclues,.board[data-n="10"] .grid{gap:2px}
+.board[data-n="10"] .grid{padding:2px}
+.board[data-n="10"] .clue{font-size:11.5px;gap:2px}
+.board[data-n="10"] .rowclue{min-width:76px;padding-right:4px}
+.board[data-n="10"] .cell{border-radius:3px}
+.board[data-n="10"] .cell.x::after{font-size:12px}
+.board[data-n="12"],.board[data-n="15"]{padding:8px;gap:3px}
+.board[data-n="12"] .colclues,.board[data-n="12"] .grid,.board[data-n="15"] .colclues,.board[data-n="15"] .grid{gap:1px}
+.board[data-n="12"] .grid,.board[data-n="15"] .grid{padding:1px}
+.board[data-n="12"] .clue{font-size:11px;gap:1px}
+.board[data-n="15"] .clue{font-size:10px;gap:1px}
+.board[data-n="12"] .rowclue,.board[data-n="15"] .rowclue{min-width:84px;padding-right:3px}
+.board[data-n="12"] .cell,.board[data-n="15"] .cell{border-radius:2px}
+.board[data-n="12"] .cell.x::after,.board[data-n="15"] .cell.x::after{font-size:10px}
+.records{margin-top:16px;background:var(--panel);border-radius:14px;padding:14px}
+.records h2{font-size:15px;margin:0 0 8px}
+.records table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.records th,.records td{text-align:left;padding:5px 4px;border-bottom:1px solid var(--grout)}
+.records th{color:var(--muted);font-weight:500;font-size:12.5px}
+.records .none{color:var(--muted);font-size:13.5px;margin:0}
+.records .clear{margin-top:10px;background:transparent;border:0;color:var(--muted);font:inherit;font-size:13px;cursor:pointer;text-decoration:underline;min-height:36px}
+.grid{
+  display:grid;grid-template-columns:repeat(var(--n,5),minmax(0,1fr));gap:4px;
+  background:var(--grout);padding:4px;border-radius:8px;touch-action:none;user-select:none;-webkit-user-select:none;
+}
+.cell{
+  aspect-ratio:1;background:var(--tile);border-radius:4px;border:0;padding:0;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-size:22px;color:var(--x);transition:background .1s,transform .1s;
+}
+.cell:focus-visible{outline:3px solid var(--fill);outline-offset:1px}
+.cell.f{background:var(--fill)}
+.cell.f:active{background:var(--fill2)}
+.cell.x::after{content:"✕";font-size:20px;font-weight:700}
+.win .cell.f{background:var(--ok)}
+.controls{display:flex;gap:8px;margin-top:14px}
+.seg{display:flex;flex:1;background:var(--panel);border-radius:10px;padding:3px}
+.seg button{
+  flex:1;border:0;background:transparent;color:var(--muted);font:inherit;font-size:15px;
+  padding:10px 0;border-radius:8px;cursor:pointer;min-height:44px
+}
+.seg button[aria-pressed="true"]{background:var(--btn);color:var(--btnText);font-weight:700}
+.actions{display:flex;gap:8px;margin-top:8px}
+.actions button{
+  flex:1;min-height:46px;border-radius:10px;border:2px solid var(--grout);
+  background:transparent;color:var(--ink);font:inherit;font-size:15px;cursor:pointer
+}
+.actions button.primary{background:var(--btn);border-color:var(--btn);color:var(--btnText);font-weight:700}
+button:focus-visible{outline:3px solid var(--fill);outline-offset:2px}
+#msg{min-height:28px;margin:14px 0 0;text-align:center;font-weight:700;color:var(--ok)}
+.rules{margin:10px 0 0;color:var(--muted);font-size:13.5px;line-height:1.7}
+body{-webkit-text-size-adjust:100%;touch-action:manipulation}
+.boardwrap{position:relative;overflow-x:auto;border-radius:14px}
+.cell{container-type:inline-size;min-width:0;min-height:0;overflow:hidden;touch-action:none;-webkit-tap-highlight-color:transparent}
+.board[data-n] .cell.x::after{font-size:52cqw;line-height:1}
+.board .colclues{padding:0 4px}
+.board .rowclues{padding:4px 0}
+.board[data-n="10"] .colclues{padding:0 2px}
+.board[data-n="10"] .rowclues{padding:2px 0}
+.board[data-n="12"] .colclues,.board[data-n="15"] .colclues{padding:0 1px}
+.board[data-n="12"] .rowclues,.board[data-n="15"] .rowclues{padding:1px 0}
+.board[data-n="12"]{min-width:500px}
+.board[data-n="15"]{min-width:600px}
+.tm{display:flex;align-items:center;gap:10px}
+#pause{min-height:40px;padding:0 14px;border-radius:10px;border:2px solid var(--grout);background:transparent;color:var(--ink);font:inherit;font-size:14px;cursor:pointer}
+#pause:disabled{opacity:.4;cursor:default}
+.pauseov{position:absolute;inset:0;border:0;border-radius:14px;background:var(--panel);color:var(--ink);font:inherit;font-size:20px;font-weight:700;line-height:1.8;cursor:pointer}
+.pauseov[hidden]{display:none}
+.who{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.who[hidden]{display:none}
+.who label{color:var(--muted);font-size:14px}
+.who select,.who input{flex:1;min-width:0;min-height:44px;border-radius:10px;border:2px solid var(--grout);background:var(--panel);color:var(--ink);font:inherit;font-size:16px;padding:0 10px}
+.who button{min-height:44px;padding:0 14px;border-radius:10px;border:2px solid var(--grout);background:transparent;color:var(--ink);font:inherit;font-size:15px;cursor:pointer;white-space:nowrap}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main id="wrap">
+  <header>
+    <h1>馬賽邏輯 <span id="size">5×5</span></h1>
+    <span class="tm"><span id="timer">00:00</span><button id="pause" type="button" aria-pressed="false">暫停</button></span>
+  </header>
+
+  <div class="who">
+    <label for="who">玩家</label>
+    <select id="who"></select>
+    <button id="addP" type="button">＋ 新增</button>
+  </div>
+  <div class="who" id="addRow" hidden>
+    <input id="newName" maxlength="12" placeholder="輸入玩家名字" autocomplete="off">
+    <button id="okName" type="button">確定</button>
+  </div>
+
+  <div class="boardwrap">
+  <div class="board" id="board">
+    <div class="corner"></div>
+    <div class="colclues" id="colclues"></div>
+    <div class="rowclues" id="rowclues"></div>
+    <div class="grid" id="grid" role="grid" aria-label="謎題格子"></div>
+  </div>
+  <button type="button" class="pauseov" id="pauseOv" hidden>⏸ 已暫停<br>點一下繼續</button>
+  </div>
+  <p class="rules" id="hint" hidden>此尺寸較大，在數字區或格子外左右滑動可移動畫面。</p>
+
+  <div class="who" style="margin-top:14px">
+    <label for="sizeSel">關卡尺寸</label>
+    <select id="sizeSel"></select>
+  </div>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="操作模式">
+      <button id="modeFill" aria-pressed="true">填色</button>
+      <button id="modeX" aria-pressed="false">標記 ✕</button>
+    </div>
+  </div>
+  <div class="actions">
+    <button id="reset">重來</button>
+    <button class="primary" id="next">新題目</button>
+  </div>
+
+  <p id="msg" aria-live="polite"></p>
+  <p class="rules">數字代表該行或該列連續填色格的長度，多組數字之間至少隔一格。點擊或拖曳即可填色，電腦版按右鍵可標記 ✕。</p>
+<section class="records" aria-label="成績紀錄">
+    <h2>成績紀錄</h2>
+    <div id="best"></div>
+    <h2 style="margin-top:14px">最近完成</h2>
+    <div id="recent"></div>
+    <button class="clear" id="clearRec">清除紀錄</button>
+  </section>
+</main>
+
+<script>
+(function(){
+  var N = 5;
+  var sol, grid, mode = 'fill', startT, tick, solved, nextN = 5, paused = false, pauseAt = 0;
+  function elapsed(){ return Math.floor(((paused ? pauseAt : Date.now()) - startT) / 1000); }
+  function setPauseUI(){
+    var ov = document.getElementById('pauseOv'), pb = document.getElementById('pause');
+    ov.hidden = !paused;
+    pb.textContent = paused ? '繼續' : '暫停';
+    pb.setAttribute('aria-pressed', paused ? 'true' : 'false');
+    pb.disabled = !!solved;
+  }
+  function pauseGame(on){
+    if (solved || on === paused) return;
+    if (on){
+      pauseAt = Date.now(); paused = true; clearInterval(tick);
+      document.querySelector('.boardwrap').scrollLeft = 0;
+    } else {
+      startT += Date.now() - pauseAt; paused = false;
+      clearInterval(tick); tick = setInterval(updTimer, 500);
+    }
+    setPauseUI(); updTimer();
+  }
+  function updHint(){
+    var w = document.querySelector('.boardwrap'), h = document.getElementById('hint');
+    h.hidden = !(w.scrollWidth > w.clientWidth + 2);
+  }
+  // 5×5 的用時決定下一關：1 分鐘內 → 8×8；1 至 3 分鐘 → 6×6；超過 3 分鐘 → 再練 5×5。6×6、7×7 依序升級。
+  // 關卡尺寸序列；6×6 以上依每格用時升級、留級或退級
+  var SIZES = [5, 6, 7, 8, 9, 10, 12, 15];
+  function pickNext(n, sec){
+    if (n === 5) return sec < 60 ? 8 : (sec <= 180 ? 6 : 5);
+    var i = SIZES.indexOf(n), pass = n * n * 7.5, limit = n * n * 14;
+    if (sec <= pass) return SIZES[Math.min(i + 1, SIZES.length - 1)];
+    if (sec <= limit) return n;
+    return SIZES[Math.max(i - 1, 0)];
+  }
+
+  // 成績紀錄（存在目前瀏覽器）
+  function fmt(s){ return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+  var KEY = 'nono-records-v1', records = [], dbDoc = null;
+  var player = '', players = [], levels = {};
+  try {
+    players = JSON.parse(localStorage.getItem('nono-players-v1') || '[]') || [];
+    levels = JSON.parse(localStorage.getItem('nono-levels-v1') || '{}') || {};
+    player = localStorage.getItem('nono-cur-v1') || '';
+  } catch(e){}
+  if (!player) player = players[0] || '玩家1';
+  if (players.indexOf(player) < 0) players.push(player);
+  function esc(s){ var d = document.createElement('div'); d.textContent = s || '未記名'; return d.innerHTML; }
+  try { records = JSON.parse(localStorage.getItem(KEY) || '[]') || []; } catch(e){ records = []; }
+  function saveRec(){
+    try {
+      localStorage.setItem(KEY, JSON.stringify(records));
+      localStorage.setItem('nono-players-v1', JSON.stringify(players));
+      localStorage.setItem('nono-levels-v1', JSON.stringify(levels));
+      localStorage.setItem('nono-cur-v1', player);
+    } catch(e){}
+    if (dbDoc){ try { dbDoc.set({list: records, players: players, levels: levels}).catch(function(){}); } catch(e){} }
+  }
+  function bestOf(n, p){ var b = null; records.forEach(function(r){ if (r.n === n && (r.p || '') === p && (b === null || r.sec < b)) b = r.sec; }); return b; }
+  function addRecord(n, sec){
+    var prev = bestOf(n, player);
+    records.push({n: n, sec: sec, t: Date.now(), p: player});
+    if (records.length > 200) records = records.slice(-200);
+    saveRec(); renderRecords();
+    return prev !== null && sec < prev;
+  }
+  function renderRecords(){
+    var best = document.getElementById('best'), rec = document.getElementById('recent');
+    if (!records.length){
+      best.innerHTML = '<p class="none">完成題目後，成績會記錄在這裡。</p>';
+      rec.innerHTML = '<p class="none">尚無紀錄</p>';
+      return;
+    }
+    var rows = '';
+    var names = [];
+    records.forEach(function(r){ var p = r.p || ''; if (names.indexOf(p) < 0) names.push(p); });
+    names.forEach(function(p){
+      SIZES.forEach(function(n){
+        var cnt = records.filter(function(r){ return r.n === n && (r.p || '') === p; }).length;
+        if (cnt) rows += '<tr><td>' + esc(p) + '</td><td>' + n + '×' + n + '</td><td>' + fmt(bestOf(n, p)) + '</td><td>' + cnt + ' 次</td></tr>';
+      });
+    });
+    best.innerHTML = '<table><tr><th>玩家</th><th>格數</th><th>最佳</th><th>完成</th></tr>' + rows + '</table>';
+    var r2 = '';
+    records.slice(-10).reverse().forEach(function(r){
+      var d = new Date(r.t);
+      r2 += '<tr><td>' + esc(r.p) + '</td><td>' + r.n + '×' + r.n + '</td><td>' + fmt(r.sec) + '</td><td>' + (d.getMonth() + 1) + '/' + d.getDate() + ' ' +
+        String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + '</td></tr>';
+    });
+    rec.innerHTML = '<table><tr><th>玩家</th><th>格數</th><th>用時</th><th>時間</th></tr>' + r2 + '</table>';
+  }
+
+  // 單行邏輯求解：回傳更新後的該行狀態（0 未知、1 填色、2 空白），矛盾時回傳 null
+  function solveLine(clue, line){
+    var n = line.length, k = clue.length, i, j, x;
+    var F = [], B = [];
+    for (i = 0; i <= n + 1; i++){ F.push(new Array(k + 1).fill(false)); B.push(new Array(k + 1).fill(false)); }
+    function nxt(p, q){
+      var b = clue[q];
+      if (p + b > n) return -1;
+      for (var y = p; y < p + b; y++) if (line[y] === 2) return -1;
+      if (p + b < n && line[p + b] === 1) return -1;
+      return p + b < n ? p + b + 1 : n;
+    }
+    F[0][0] = true;
+    for (i = 0; i < n; i++) for (j = 0; j <= k; j++){
+      if (!F[i][j]) continue;
+      if (line[i] !== 1) F[i + 1][j] = true;
+      if (j < k){ var t = nxt(i, j); if (t >= 0) F[t][j + 1] = true; }
+    }
+    if (!F[n][k]) return null;
+    B[n][k] = true;
+    for (i = n - 1; i >= 0; i--) for (j = 0; j <= k; j++){
+      var good = false;
+      if (line[i] !== 1 && B[i + 1][j]) good = true;
+      if (!good && j < k){ var t2 = nxt(i, j); if (t2 >= 0 && B[t2][j + 1]) good = true; }
+      B[i][j] = good;
+    }
+    var cf = new Array(n).fill(false), ce = new Array(n).fill(false);
+    for (i = 0; i < n; i++) for (j = 0; j <= k; j++){
+      if (!F[i][j]) continue;
+      if (line[i] !== 1 && B[i + 1][j]) ce[i] = true;
+      if (j < k){
+        var t3 = nxt(i, j);
+        if (t3 >= 0 && B[t3][j + 1]){
+          for (x = i; x < i + clue[j]; x++) cf[x] = true;
+          if (i + clue[j] < n) ce[i + clue[j]] = true;
+        }
+      }
+    }
+    var out = line.slice();
+    for (i = 0; i < n; i++){
+      if (cf[i] && !ce[i]) out[i] = 1; else if (ce[i] && !cf[i]) out[i] = 2;
+    }
+    return out;
+  }
+
+  // 以行列交叉推理模擬解題，回傳需要的輪數與剩餘未解格數
+  function analyze(rc, cc){
+    var st = [], r, c, rounds = 0, changed = true;
+    for (r = 0; r < N; r++) st.push(new Array(N).fill(0));
+    while (changed){
+      changed = false;
+      for (r = 0; r < N; r++){
+        var o = solveLine(rc[r], st[r]); if (!o) return null;
+        for (c = 0; c < N; c++) if (o[c] !== st[r][c]){ st[r][c] = o[c]; changed = true; }
+      }
+      for (c = 0; c < N; c++){
+        var col = st.map(function(row){ return row[c]; });
+        var o2 = solveLine(cc[c], col); if (!o2) return null;
+        for (r = 0; r < N; r++) if (o2[r] !== st[r][c]){ st[r][c] = o2[r]; changed = true; }
+      }
+      if (changed) rounds++;
+    }
+    var left = 0;
+    for (r = 0; r < N; r++) for (c = 0; c < N; c++) if (st[r][c] === 0) left++;
+    return {rounds: rounds, left: left};
+  }
+
+  // 出題：只保留不必猜測、且需要多輪交叉推理的謎題
+  function genPuzzle(){
+    var t0 = Date.now(), best = null, bestScore = 1e9, minR = N <= 6 ? 2 : 3;
+    function pos(line){ return runs(line).filter(function(v){ return v > 0; }); }
+    while (true){
+      var s = genRaw(), c;
+      var rc = s.map(function(row){ return pos(row); });
+      var cc = [];
+      for (c = 0; c < N; c++) cc.push(pos(s.map(function(row){ return row[c]; })));
+      var a = analyze(rc, cc);
+      if (a && a.left === 0 && a.rounds >= minR) return s;
+      var score = a ? a.left + (a.rounds < minR ? 1000 : 0) : 1e9;
+      if (score < bestScore){ best = s; bestScore = score; }
+      if (Date.now() - t0 > 700) return best;
+    }
+  }
+  var gridEl = document.getElementById('grid');
+  var cells = [];
+
+  function runs(line){
+    var out = [], c = 0;
+    for (var i = 0; i < line.length; i++){
+      if (line[i]) c++;
+      else if (c){ out.push(c); c = 0; }
+    }
+    if (c) out.push(c);
+    return out.length ? out : [0];
+  }
+  function rowOf(g, r){ return g[r].map(function(v){ return v === 1; }); }
+  function colOf(g, c){ return g.map(function(row){ return row[c] === 1; }); }
+  function same(a, b){ return a.length === b.length && a.every(function(v, i){ return v === b[i]; }); }
+
+  function genRaw(){
+    while (true){
+      var s = [], total = 0, r, c;
+      for (r = 0; r < N; r++){
+        s.push([]);
+        for (c = 0; c < N; c++){ var v = Math.random() < 0.6; s[r].push(v); if (v) total++; }
+      }
+      var ok = total >= Math.round(N * N * 0.48) && total <= Math.round(N * N * 0.76);
+      for (r = 0; ok && r < N; r++) if (!s[r].some(Boolean)) ok = false;
+      for (c = 0; ok && c < N; c++) if (!s.some(function(row){ return row[c]; })) ok = false;
+      if (ok) return s;
+    }
+  }
+
+  var rowT, colT;
+  function setup(){
+    document.getElementById('board').setAttribute('data-n', N);
+    document.getElementById('wrap').style.maxWidth = N >= 12 ? '640px' : '440px';
+    document.documentElement.style.setProperty('--n', N);
+    document.getElementById('size').textContent = N + '×' + N;
+    var ss = document.getElementById('sizeSel'); if (ss) ss.value = String(N);
+    sol = genPuzzle();
+    rowT = sol.map(function(row){ return runs(row); });
+    colT = []; for (var c = 0; c < N; c++) colT.push(runs(sol.map(function(row){ return row[c]; })));
+    buildClues();
+    resetGrid();
+  }
+
+  function buildClues(){
+    var cc = document.getElementById('colclues'), rc = document.getElementById('rowclues');
+    cc.innerHTML = ''; rc.innerHTML = '';
+    colT.forEach(function(cl){
+      var d = document.createElement('div'); d.className = 'clue colclue';
+      cl.forEach(function(n){ var s = document.createElement('span'); s.textContent = n; d.appendChild(s); });
+      cc.appendChild(d);
+    });
+    rowT.forEach(function(cl){
+      var d = document.createElement('div'); d.className = 'clue rowclue';
+      cl.forEach(function(n){ var s = document.createElement('span'); s.textContent = n; d.appendChild(s); });
+      rc.appendChild(d);
+    });
+  }
+
+  function resetGrid(){
+    grid = []; for (var r = 0; r < N; r++){ grid.push([]); for (var c = 0; c < N; c++) grid[r].push(0); }
+    solved = false;
+    document.getElementById('board').classList.remove('win');
+    document.getElementById('msg').textContent = '';
+    document.getElementById('next').textContent = '新題目';
+    gridEl.innerHTML = ''; cells = [];
+    for (var i = 0; i < N * N; i++){
+      var b = document.createElement('button');
+      b.className = 'cell'; b.dataset.i = i; b.setAttribute('role', 'gridcell');
+      b.setAttribute('aria-label', '第' + (Math.floor(i / N) + 1) + '列第' + (i % N + 1) + '行');
+      gridEl.appendChild(b); cells.push(b);
+    }
+    render();
+    paused = false; setPauseUI(); updHint();
+    startT = Date.now(); clearInterval(tick);
+    tick = setInterval(updTimer, 500); updTimer();
+  }
+
+  function updTimer(){
+    var s = elapsed();
+    document.getElementById('timer').textContent =
+      String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+  }
+
+  function render(){
+    var clueR = document.querySelectorAll('.rowclue'), clueC = document.querySelectorAll('.colclue');
+    for (var r = 0; r < N; r++) for (var c = 0; c < N; c++){
+      var el = cells[r * N + c], v = grid[r][c];
+      el.className = 'cell' + (v === 1 ? ' f' : v === 2 ? ' x' : '');
+    }
+    var all = true;
+    for (r = 0; r < N; r++){
+      var okR = same(runs(rowOf(grid, r)), rowT[r]);
+      clueR[r].classList.toggle('done', okR); if (!okR) all = false;
+    }
+    for (c = 0; c < N; c++){
+      var okC = same(runs(colOf(grid, c)), colT[c]);
+      clueC[c].classList.toggle('done', okC); if (!okC) all = false;
+    }
+    if (all && !solved){
+      solved = true; clearInterval(tick);
+      document.getElementById('board').classList.add('win');
+      var sec = elapsed();
+      nextN = pickNext(N, sec);
+      levels[player] = nextN;
+      var isBest = addRecord(N, sec);
+      setPauseUI();
+      document.getElementById('msg').textContent = '完成！' + (isBest ? '新紀錄！' : '') + '用時 ' + document.getElementById('timer').textContent +
+        '，下一關：' + nextN + '×' + nextN + (nextN > N ? '（升級）' : nextN < N ? '（退一級）' : '（再練習一次）');
+      document.getElementById('next').textContent = '下一關';
+    }
+  }
+
+  function apply(i, val){
+    if (solved || paused) return;
+    var r = Math.floor(i / N), c = i % N;
+    if (grid[r][c] !== val){ grid[r][c] = val; render(); }
+  }
+
+  var dragVal = null, dragging = false;
+  function cellFrom(e){
+    var el = document.elementFromPoint(e.clientX, e.clientY);
+    return el && el.classList.contains('cell') ? +el.dataset.i : null;
+  }
+  gridEl.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  gridEl.addEventListener('pointerdown', function(e){
+    var i = cellFrom(e); if (i === null || solved || paused) return;
+    e.preventDefault();
+    var cur = grid[Math.floor(i / N)][i % N];
+    var want = (e.button === 2 || mode === 'x') ? 2 : 1;
+    dragVal = (cur === want) ? 0 : want;
+    dragging = true; apply(i, dragVal);
+  });
+  gridEl.addEventListener('pointermove', function(e){
+    if (!dragging) return;
+    var i = cellFrom(e); if (i !== null) apply(i, dragVal);
+  });
+  window.addEventListener('pointerup', function(){ dragging = false; });
+  window.addEventListener('pointercancel', function(){ dragging = false; });
+  gridEl.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.key === ' '){
+      var el = document.activeElement;
+      if (el && el.classList.contains('cell')){
+        e.preventDefault();
+        var i = +el.dataset.i, cur = grid[Math.floor(i / N)][i % N];
+        var want = mode === 'x' ? 2 : 1;
+        apply(i, cur === want ? 0 : want);
+        cells[i].focus();
+      }
+    }
+  });
+
+  function setMode(m){
+    mode = m;
+    document.getElementById('modeFill').setAttribute('aria-pressed', m === 'fill');
+    document.getElementById('modeX').setAttribute('aria-pressed', m === 'x');
+  }
+  document.getElementById('modeFill').onclick = function(){ setMode('fill'); };
+  document.getElementById('modeX').onclick = function(){ setMode('x'); };
+  document.getElementById('reset').onclick = resetGrid;
+  document.getElementById('next').onclick = function(){
+    if (solved) N = nextN;
+    setup();
+  };
+
+  var clr = document.getElementById('clearRec'), clrT;
+  clr.onclick = function(){
+    if (clr.dataset.arm === '1'){
+      records = []; saveRec(); renderRecords();
+      clr.dataset.arm = ''; clr.textContent = '清除紀錄'; clearTimeout(clrT);
+    } else {
+      clr.dataset.arm = '1'; clr.textContent = '再按一次確認清除';
+      clrT = setTimeout(function(){ clr.dataset.arm = ''; clr.textContent = '清除紀錄'; }, 3000);
+    }
+  };
+
+  function renderPlayers(){
+    var sel = document.getElementById('who');
+    sel.innerHTML = '';
+    players.forEach(function(p){
+      var o = document.createElement('option'); o.value = p; o.textContent = p; sel.appendChild(o);
+    });
+    sel.value = player;
+  }
+  function switchPlayer(p){
+    player = p;
+    N = levels[p] || 5;
+    renderPlayers(); saveRec(); setup();
+  }
+  document.getElementById('who').onchange = function(){ switchPlayer(this.value); };
+  document.getElementById('addP').onclick = function(){
+    document.getElementById('addRow').hidden = false;
+    document.getElementById('newName').focus();
+  };
+  document.getElementById('okName').onclick = function(){
+    var inp = document.getElementById('newName'), name = inp.value.trim().slice(0, 12);
+    if (!name) return;
+    if (players.indexOf(name) < 0) players.push(name);
+    inp.value = '';
+    document.getElementById('addRow').hidden = true;
+    switchPlayer(name);
+  };
+  document.getElementById('newName').addEventListener('keydown', function(e){
+    if (e.key === 'Enter'){ e.preventDefault(); document.getElementById('okName').click(); }
+  });
+  document.getElementById('pause').onclick = function(){ pauseGame(!paused); };
+  document.getElementById('pauseOv').onclick = function(){ pauseGame(false); };
+  document.addEventListener('visibilitychange', function(){ if (document.hidden) pauseGame(true); });
+  window.addEventListener('resize', updHint);
+
+  var ss = document.getElementById('sizeSel');
+  SIZES.forEach(function(n){
+    var o = document.createElement('option'); o.value = String(n); o.textContent = n + '×' + n; ss.appendChild(o);
+  });
+  ss.onchange = function(){ N = +this.value; levels[player] = N; saveRec(); setup(); };
+
+  N = levels[player] || 5;
+  renderPlayers();
+  renderRecords();
+  setup();
+
+  // 將成績同步到帳號（僅本人可見），重新開啟或換裝置都能讀回
+  (async function(){
+    try {
+      if (!window.claude) return;
+      var db = await claude.use('db'), user = await claude.use('user');
+      if (!db || !user) return;
+      var id = await user.id();
+      if (!id) return;
+      dbDoc = db.collection('data/users/' + id).doc('records');
+      var snap = await dbDoc.get();
+      var remote = snap.exists ? ((snap.data() || {}).list || []) : [];
+      var seen = {}, merged = [];
+      remote.concat(records).forEach(function(r){
+        var k = r.t + '-' + r.n + '-' + r.sec;
+        if (!seen[k]){ seen[k] = 1; merged.push(r); }
+      });
+      merged.sort(function(a, b){ return a.t - b.t; });
+      records = merged.slice(-200);
+      var rd = snap.exists ? (snap.data() || {}) : {};
+      (rd.players || []).forEach(function(p){ if (players.indexOf(p) < 0) players.push(p); });
+      records.forEach(function(r){ if (r.p && players.indexOf(r.p) < 0) players.push(r.p); });
+      levels = Object.assign({}, rd.levels || {}, levels);
+      renderPlayers();
+      saveRec(); renderRecords();
+      var fresh = grid.every(function(row){ return row.every(function(v){ return v === 0; }); });
+      if (fresh && (levels[player] || 5) !== N){ N = levels[player] || 5; setup(); }
+    } catch(e){}
+  })();
+})();
+</script>
+</body>
+</html>
